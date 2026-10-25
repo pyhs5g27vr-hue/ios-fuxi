@@ -1,14 +1,6 @@
 --- a/pexpert/arm/pe_serial.c
 +++ b/pexpert/arm/pe_serial.c
-@@ -721,6 +721,7 @@
- #if defined(FUXI)
- static volatile uint32_t *fuxi_ctl0;
- static volatile uint32_t *fuxi_intf1;
-+static int fuxi_kick_count;
- /* The inherited M3 panel is command mode. Validated CTL0 starts a new frame. */
- void fuxi_display_kick(void)
- {
-@@ -730,10 +730,18 @@
+@@ -730,9 +730,17 @@
          __asm__ volatile("dsb sy" ::: "memory");
          return;
      }
@@ -16,16 +8,15 @@
 +    if (fuxi_ctl0 != NULL) {
 +        volatile uint32_t *start = &fuxi_ctl0[0x1c / 4];
 +        uint32_t before = *start;
++        static int logged;
          __asm__ volatile("dsb sy" ::: "memory");
 -        fuxi_ctl0[0x1c / 4] = 1;
 +        *start = 1;
          __asm__ volatile("dsb sy" ::: "memory");
-+        if (fuxi_kick_count < 8) {
-+            fuxi_kick_count++;
-+            printf("FUXI KICK %d: intf1=%#x start before=%#x after=%#x\n",
-+                fuxi_kick_count, fuxi_intf1 ? fuxi_intf1[0x2b4 / 4] : 0,
-+                before, *start);
++        if (logged < 8) {
++            logged++;
++            printf("FUXI KICK %d: start before=%#x after=%#x\n",
++                logged, before, *start);
 +        }
      }
  }
- #endif
