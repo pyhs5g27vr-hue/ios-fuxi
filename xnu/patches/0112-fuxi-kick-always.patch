@@ -1,0 +1,29 @@
+--- a/pexpert/arm/pe_serial.c
++++ b/pexpert/arm/pe_serial.c
+@@ -720,18 +720,25 @@
+ #if defined(FUXI)
+ static volatile uint32_t *fuxi_ctl0;
+-/* The inherited M3 panel is command mode. Validated CTL0 starts a new frame. */
++static int fuxi_kick_count;
++/* The inherited M3 panel is command mode. Validated CTL0 starts a new frame.
++ * This unit leaves the START bit set after a transfer, so the guarded write
++ * never fired and no frame ever reached the panel: write it on every present
++ * and report what the register did. */
+ void fuxi_display_kick(void)
+ {
+-    if (fuxi_ctl0 != NULL && !(fuxi_ctl0[0x1c / 4] & 1)) {
++    if (fuxi_ctl0 != NULL) {
++        volatile uint32_t *start = &fuxi_ctl0[0x1c / 4];
++        uint32_t before = *start;
+         __asm__ volatile("dsb sy" ::: "memory");
+-        fuxi_ctl0[0x1c / 4] = 1;
++        *start = 1;
+         __asm__ volatile("dsb sy" ::: "memory");
++        if (fuxi_kick_count < 8) {
++            fuxi_kick_count++;
++            printf("FUXI KICK %d: start before=%#x after=%#x\n",
++                fuxi_kick_count, before, *start);
++        }
+     }
+ }
+ #endif
