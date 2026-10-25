@@ -1,6 +1,15 @@
 --- a/iokit/Kernel/arm/SweetFramebuffer.cpp
 +++ b/iokit/Kernel/arm/SweetFramebuffer.cpp
-@@ -683,6 +683,8 @@
+@@ -71,6 +71,8 @@
+ #include <kern/clock.h>
+ #include <sys/proc.h>
+ 
++extern "C" vm_offset_t ml_io_map(vm_offset_t, vm_size_t);
++
+ #if defined(FUXI)
+ extern void fuxi_backlight_publish(IOService *provider);
+ extern void fuxi_backlight_display_state(IOService *provider, bool on);
+@@ -683,6 +685,8 @@
  			 * multi-layer records rather than submit multiple fences per frame. */
  			if ((mask & (mask-1)) == 0)
  				copied = sweet_surface_gpu_copy(s, src, sx, sy, dx, dy, w, h);
@@ -9,7 +18,7 @@
              if (copied == 3 || (copied < 0 && fScanout)) {
               fScanoutDefers++;
               IOLockLock(fLock); fDirty = true; IOLockUnlock(fLock);
-@@ -720,6 +722,7 @@
+@@ -720,6 +724,7 @@
  #endif
  			if (copied != 2 && !diffCopied) {
  				fShadowValid = false;
@@ -17,12 +26,11 @@
  #if defined(FUXI)
  				if (fUnixnuDiff) {
  					uint64_t offset = (uint64_t)s->offset + (uint64_t)sy * s->bytesPerRow + (uint64_t)sx * 4;
-@@ -738,6 +741,34 @@
+@@ -738,6 +743,33 @@
  #if defined(FUXI)
  			if (copied != 2) {
  				cpuFrame = true;
 +				{
-+					extern "C" vm_offset_t ml_io_map(vm_offset_t, vm_size_t);
 +					static vm_offset_t dpuCtl = 0;
 +					static int kickReady = -1;
 +					if (kickReady < 0) {
