@@ -1,15 +1,15 @@
 --- a/iokit/Kernel/arm/SweetFramebuffer.cpp
 +++ b/iokit/Kernel/arm/SweetFramebuffer.cpp
-@@ -683,6 +683,7 @@
+@@ -683,6 +683,8 @@
  			 * multi-layer records rather than submit multiple fences per frame. */
  			if ((mask & (mask-1)) == 0)
  				copied = sweet_surface_gpu_copy(s, src, sx, sy, dx, dy, w, h);
 +				IOLog("SWEET DBG: id=%u mask=%x src=%p pix=%p w=%d h=%d dx=%d dy=%d gpu=%d\n",
-				    id, mask, (void *)src, (void *)fPixels, w, h, dx, dy, copied);
++				    id, mask, (void *)src, (void *)fPixels, w, h, dx, dy, copied);
              if (copied == 3 || (copied < 0 && fScanout)) {
               fScanoutDefers++;
               IOLockLock(fLock); fDirty = true; IOLockUnlock(fLock);
-@@ -720,6 +721,7 @@
+@@ -720,6 +722,7 @@
  #endif
  			if (copied != 2 && !diffCopied) {
  				fShadowValid = false;
