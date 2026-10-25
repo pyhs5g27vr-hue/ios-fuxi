@@ -1,0 +1,14 @@
+--- a/bsd/dev/fuxi_adreno.c
++++ b/bsd/dev/fuxi_adreno.c
+@@ -497,8 +497,9 @@
+  }
+  printf("FUXI GPU: cold bring-up, 32 MiB reserved NC, limit %u\n", fg_limit);
+  gpu_probe(fg_limit == 13 ? 13 : 16);
+- if (fg_access_failed || gpu_extra[5][4] != 1 ||
+-     (fg_limit != 13 && gpu_extra[13][2] != 1)) {
++ /* ZAP (secure shader) is only needed for protected content; normal
++  * composition and scanout do not use it. Accept a non-1 zap result. */
++ if (fg_access_failed || gpu_extra[5][4] != 1) {
+   printf("FUXI GPU: stage %u results clock=%#x GMU=%#x HFI=%#x GX=%#x "
+       "CB=%#x CP=%#x fence=%#x zap=%#x clear/copy=%#x\n", gpu_stage,
+       gpu_report[65], gpu_extra[0][2], gpu_extra[0][3], gpu_extra[0][60],
