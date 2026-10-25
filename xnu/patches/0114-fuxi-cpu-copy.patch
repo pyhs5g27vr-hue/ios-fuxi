@@ -1,0 +1,12 @@
+--- a/iokit/Kernel/arm/SweetSurface.cpp
++++ b/iokit/Kernel/arm/SweetSurface.cpp
+@@ -120,4 +120,9 @@
+ int sweet_surface_gpu_copy(SweetSurface *s, uintptr_t src, unsigned sx, unsigned sy,
+     unsigned dx, unsigned dy, unsigned width, unsigned height)
+ {
++ /* fuxi: the GPU surface copy never retires sweet_gpu_inflight on this unit, so
++  * every following frame returned 2 and was skipped, leaving the panel on stale
++  * content. Take the CPU copy; the GPU scanout still moves the frame to the
++  * panel. */
++ return 0;
+  if (!fuxi_gpu_ready() || s->pixelFormat != 0x42475241u ||
