@@ -1,85 +1,50 @@
 --- a/bsd/dev/fuxi_touch.c
 +++ b/bsd/dev/fuxi_touch.c
-@@ -1132,6 +1132,74 @@
- 	return 0;
- }
- 
-+
-+/*
-+ * RPMh probe: the GT9916's iovdd (ldob12, 1.8 V) and avdd (ldom6, 3.2 V) are
-+ * RPMh VRM resources. The bootloader's cmd-db names them and the APPS RSC
-+ * carries the command. This prints what the tables actually contain before the
-+ * driver tries to talk to the controller.
-+ */
-+#define FUXI_CMD_DB_PHYS	0x81c60000UL
-+#define FUXI_CMD_DB_SIZE	0x20000UL
-+#define FUXI_APPS_RSC		0x17a00000UL
-+#define FUXI_RSC_SLOTS		0xd00UL
-+#define FUXI_RSC_SLOT_SIZE	0x2a0UL
-+
-+struct fuxi_db_slave { uint16_t id, header_offset, data_offset, count, version, rsv[3]; };
-+struct fuxi_db_header { uint32_t version; uint8_t magic[4]; struct fuxi_db_slave slave[8]; uint32_t checksum, rsv; };
-+struct fuxi_db_entry { char id[8]; uint32_t prio[2]; uint32_t address; uint16_t length, offset; };
-+
-+static uint32_t
-+fuxi_rpmh_lookup(const char *name)
-+{
-+	static const struct fuxi_db_header *db;
-+	char id[8] = {0};
-+
-+	if (db == NULL) {
-+		db = (const struct fuxi_db_header *)ml_io_map_wcomb(FUXI_CMD_DB_PHYS, FUXI_CMD_DB_SIZE);
-+	}
-+	if (db == NULL) {
-+		return 0;
-+	}
-+	if (db->magic[0] != 0xdb || db->magic[1] != 0x30 || db->magic[2] != 0x03 || db->magic[3] != 0x0c) {
-+		return 0;
-+	}
-+	strlcpy(id, name, sizeof(id));
-+	for (unsigned s = 0; s < 8; s++) {
-+		const struct fuxi_db_slave *slave = &db->slave[s];
-+		const struct fuxi_db_entry *entry;
-+
-+		if (slave->id == 0 || slave->count > 512) {
-+			continue;
-+		}
-+		entry = (const struct fuxi_db_entry *)((const uint8_t *)(db + 1) + slave->header_offset);
-+		for (unsigned i = 0; i < slave->count; i++) {
-+			if (memcmp(entry[i].id, id, sizeof(id)) == 0) {
-+				return entry[i].address;
-+			}
-+		}
-+	}
-+	return 0;
-+}
-+
-+static void
-+fuxi_rpmh_probe(void)
-+{
-+	volatile uint32_t *rsc = (volatile uint32_t *)ml_io_map(FUXI_APPS_RSC, 0x4000);
-+	uint32_t iovdd = fuxi_rpmh_lookup("ldob12");
-+	uint32_t avdd = fuxi_rpmh_lookup("ldom6");
-+
-+	printf("FUXI RPMH: iovdd(ldob12)=%#x avdd(ldom6)=%#x\n", iovdd, avdd);
-+	if (rsc != NULL) {
-+		volatile uint32_t *slot = (volatile uint32_t *)((volatile uint8_t *)rsc + FUXI_RSC_SLOTS);
-+		printf("FUXI RPMH: rsc drv cfg=%#x  slot0: %#x %#x %#x %#x %#x %#x %#x %#x\n",
-+		    rsc[0x00c / 4], slot[0], slot[1], slot[2], slot[3],
-+		    slot[4], slot[5], slot[6], slot[7]);
-+	} else {
-+		printf("FUXI RPMH: rsc map failed\n");
-+	}
-+}
-+
- static void
- ft_thread(void *arg, wait_result_t result)
- {
-@@ -1151,6 +1151,7 @@
- 	idle_us = idle_us < poll_us ? poll_us : idle_us;
+@@ -648,2 +648,47 @@
  	printf("FUXI TOUCH: starting in %u s (poll %u us active, %u us idle)\n", delay_s,
  	    poll_us, idle_us);
-+	fuxi_rpmh_probe();
- 	ft_sleep(delay_s * 1000u);
- 	ft.gcc = ml_io_map(FT_GCC_PA, 0x1f0000);
- 	ft.tlmm = ml_io_map(FT_TLMM_PA, 0x30000);
++	{
++		/* RPMh: the controller's iovdd (ldob12) and avdd (ldom6) are VRM
++		 * resources named in the bootloader's cmd-db; the APPS RSC carries
++		 * the command. Print what the tables actually contain first. */
++		#define FUXI_DB_PHYS	0x81c60000UL
++		#define FUXI_DB_SIZE	0x20000UL
++		#define FUXI_RSC_PHYS	0x17a00000UL
++		typedef struct { uint16_t id, header_offset, data_offset, count, version, rsv[3]; } db_slave_t;
++		typedef struct { uint32_t version; uint8_t magic[4]; db_slave_t slave[8]; uint32_t checksum, rsv; } db_header_t;
++		typedef struct { char id[8]; uint32_t prio[2]; uint32_t address; uint16_t length, offset; } db_entry_t;
++		const db_header_t *db = (const db_header_t *)ml_io_map_wcomb(FUXI_DB_PHYS, FUXI_DB_SIZE);
++		uint32_t iovdd = 0, avdd = 0;
++		volatile uint32_t *rsc;
++
++		if (db != NULL && db->magic[0] == 0xdb && db->magic[1] == 0x30 &&
++		    db->magic[2] == 0x03 && db->magic[3] == 0x0c) {
++			for (unsigned s = 0; s < 8; s++) {
++				const db_slave_t *slave = &db->slave[s];
++				const db_entry_t *entry;
++
++				if (slave->id == 0 || slave->count > 512) {
++					continue;
++				}
++				entry = (const db_entry_t *)((const uint8_t *)(db + 1) + slave->header_offset);
++				for (unsigned i = 0; i < slave->count; i++) {
++					if (memcmp(entry[i].id, "ldob12\0\0", 8) == 0) {
++						iovdd = entry[i].address;
++					} else if (memcmp(entry[i].id, "ldom6\0\0\0", 8) == 0) {
++						avdd = entry[i].address;
++					}
++				}
++			}
++			printf("FUXI RPMH: magic ok iovdd=%#x avdd=%#x\n", iovdd, avdd);
++		} else {
++			printf("FUXI RPMH: cmd-db not found\n");
++		}
++		rsc = (volatile uint32_t *)ml_io_map(FUXI_RSC_PHYS, 0x4000);
++		if (rsc != NULL) {
++			volatile uint32_t *slot = (volatile uint32_t *)((volatile uint8_t *)rsc + 0xd00);
++			printf("FUXI RPMH: rsc slot0 %#x %#x %#x %#x %#x %#x %#x %#x\n",
++			    slot[0], slot[1], slot[2], slot[3], slot[4], slot[5], slot[6], slot[7]);
++		} else {
++			printf("FUXI RPMH: rsc map failed\n");
++		}
++	}
