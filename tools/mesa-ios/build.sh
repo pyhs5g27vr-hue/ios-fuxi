@@ -51,6 +51,15 @@ fi
 # the libdrm stand-in lives inside the tree, named as the freedreno-darwin patch expects
 rm -rf mesa-$VERSION/src/redwood-drm
 cp -r "$KIT"/fuxi-drm mesa-$VERSION/src/redwood-drm
+# WINSYS=fuxi swaps in the draft that speaks the NativeAdreno ABI (not yet run on
+# hardware): the build then links freedreno against our kernel's wire protocol.
+if [ "${WINSYS:-redwood}" = fuxi ]; then
+  echo "=== winsys: fuxi (NativeAdreno ABI) ==="
+  cp "$KIT/experimental/fuxi_drm.c" mesa-$VERSION/src/redwood-drm/redwood_drm.c
+  cp "$KIT/experimental/NativeAdrenoABI.h" mesa-$VERSION/src/redwood-drm/
+else
+  echo "=== winsys: redwood (reference shim; no device on fuxi, falls back to softpipe) ==="
+fi
 
 if [ ! -x venv/bin/python3 ]; then
   python3 -m venv venv
