@@ -22,7 +22,6 @@
 #include <unistd.h>
 /* the iOS SDK has no <sys/reboot.h>; libSystem still exports reboot(2) */
 extern int reboot(int howto);
-extern int halt(void);
 
 /* the OSMesa surface interface, as gl_osmesa.c declares it */
 #define OSMESA_RGBA                     0x1908
@@ -151,7 +150,7 @@ out:
 		sleep(5);
 		sync();
 		reboot(0);          /* RB_AUTOBOOT: the machine restarts once */
-		halt();             /* if reboot is refused, stop here instead of looping */
+		for (;;) sleep(60); /* reboot was refused: stay put rather than loop */
 		return 0;
 	}
 	say("fuxi_gl_test: FAIL -> staying up\n");
