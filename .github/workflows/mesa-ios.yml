@@ -14,20 +14,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Show toolchain
-        run: |
-          xcrun --sdk iphoneos --show-sdk-path
-          xcrun --find clang
       - name: Build Mesa for arm64-apple-ios
         run: bash tools/mesa-ios/build.sh
-      - name: Collect
-        if: always()
-        run: find build -name '*.dylib' -exec ls -lh {} \; || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: mesa-ios
           path: |
-            build/mesa-ios/build-ios/**/*.dylib
+            build/mesa-ios/build-ios/src/gallium/targets/osmesa/libOSMesa*.dylib
+            build/mesa-ios/build-ios/exported-gl.txt
             build/mesa-ios/build-ios/meson-logs/meson-log.txt
           if-no-files-found: warn
