@@ -7,7 +7,7 @@ on:
         description: Which libdrm stand-in freedreno is built against
         type: choice
         options: [redwood, fuxi]
-        default: fuxi
+        default: redwood
 
 permissions:
   contents: read
@@ -26,6 +26,8 @@ jobs:
         run: bash tools/mesa-ios/build.sh
       - name: Build the EAGL bridge
         run: bash tools/mesa-ios/build-bridge.sh
+      - name: Build the device GL test
+        run: bash tools/mesa-ios/build-gl-test.sh
       - name: Syntax-check the draft fuxi winsys
         if: always()
         run: |
@@ -44,6 +46,7 @@ jobs:
             build/mesa-ios/build-ios/src/gallium/targets/osmesa/libOSMesa*.dylib
             build/mesa-ios/build-ios/exported-gl.txt
             build/mesa-ios/libredwood-gl.dylib
+            build/mesa-ios/fuxi_gl_test
             build/mesa-ios/eagl_gen.h
             build/mesa-ios/build-ios/meson-logs/meson-log.txt
           if-no-files-found: warn
