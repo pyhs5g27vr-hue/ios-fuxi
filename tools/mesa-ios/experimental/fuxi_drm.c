@@ -225,7 +225,7 @@ static int bo_cpu_map(struct bo *b)
 		return r;
 	}
 	uint64_t addr = 0;
-	size_t size = (size_t)b->bytes;
+	mach_vm_size_t size = (mach_vm_size_t)b->bytes;
 	kern_return_t kr = IOConnectMapMemory64(connection, rep.token, mach_task_self(), &addr, &size, kIOMapAnywhere);
 	if (kr != KERN_SUCCESS) {
 		return -kern_errno(kr);
@@ -572,6 +572,7 @@ int drmPrimeFDToHandle(int fd, int surface, uint32_t *handle)
 }
 
 /* MSM's GEM_CLOSE has no MSM ioctl on this path: freedreno calls close() on the handle. */
+int drmCloseBufferHandle(int fd, uint32_t handle);
 int drmCloseBufferHandle(int fd, uint32_t handle)
 {
 	(void)fd;
