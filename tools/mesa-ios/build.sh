@@ -57,6 +57,7 @@ cat > cross-ios.ini <<INI
 [binaries]
 c = ['$CC', '-arch', 'arm64', '-miphoneos-version-min=$MIN_IOS', '-isysroot', '$SDK']
 cpp = ['$CC++', '-arch', 'arm64', '-miphoneos-version-min=$MIN_IOS', '-isysroot', '$SDK', '-fuse-cxa-atexit']
+objc = ['$CC', '-arch', 'arm64', '-miphoneos-version-min=$MIN_IOS', '-isysroot', '$SDK']
 ar = 'ar'
 ranlib = 'ranlib'
 strip = 'strip'
