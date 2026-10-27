@@ -3,7 +3,7 @@
 # CoreAnimation-on-GLES route.
 #
 # Modelled on hackios-xnu-userland's tools/mk-mesa.sh (iola1999/hackios-redmi-k90-annibale),
-# which is the only port that renders CoreAnimation through Mesa on a phone.
+# the only port that renders CoreAnimation through Mesa on a phone.
 # Differences here:
 #   * the cross compiler is Xcode's clang on a macOS runner, not Theos' xnu-clang,
 #   * the DRM substitute starts as a stub (fuxi-drm) because fuxi's GPU service
@@ -20,15 +20,12 @@ KIT=$ROOT/tools/mesa-ios
 B=${BUILD_DIR:-$ROOT/build/mesa-ios}
 SDK=$(xcrun --sdk iphoneos --show-sdk-path)
 CC=$(xcrun --find clang)
-AR=$(xcrun --find llvm-ar || true)
-RANLIB=$(xcrun --find llvm-ranlib || true)
-STRIP=$(xcrun --find llvm-strip || true)
 MIN_IOS=${MIN_IOS:-15.0}
 
 echo "=== toolchain ==="
-echo "SDK   = $SDK"
-echo "CC    = $CC"
-$CC --version | head -1 || true
+echo "SDK = $SDK"
+echo "CC  = $CC"
+"$CC" --version | head -1 || true
 
 mkdir -p "$B"
 cd "$B"
@@ -39,7 +36,7 @@ if [ ! -d mesa-$VERSION ]; then
   tar xJf mesa-$VERSION.tar.xz
   for p in "$KIT"/patches/*.patch; do
     echo "  patch $(basename "$p")"
-    patch -s --no-backup-if-mismatch -d mesa-$VERSION -p1 < "$p" || echo "  (hunk rejected, continuing)"
+    patch -s --no-backup-if-mismatch -d mesa-$VERSION -p1 < "$p" || echo "  (some hunks rejected, continuing)"
   done
 fi
 
@@ -49,18 +46,20 @@ cp -r "$KIT"/fuxi-drm mesa-$VERSION/src/redwood-drm
 
 if [ ! -x venv/bin/python3 ]; then
   python3 -m venv venv
+  venv/bin/pip -q install --upgrade pip
   venv/bin/pip -q install mako pyyaml packaging "meson==1.5.1" ninja
 fi
 export PATH=$B/venv/bin:$PATH
+meson --version
+ninja --version
 
 cat > cross-ios.ini <<INI
 [binaries]
 c = ['$CC', '-arch', 'arm64', '-miphoneos-version-min=$MIN_IOS', '-isysroot', '$SDK']
 cpp = ['$CC++', '-arch', 'arm64', '-miphoneos-version-min=$MIN_IOS', '-isysroot', '$SDK', '-fuse-cxa-atexit']
-ar = '${AR:-llvm-ar}'
-ranlib = '${RANLIB:-llvm-ranlib}'
-strip = '${STRIP:-llvm-strip}'
-pkg-config = 'pkg-config'
+ar = 'ar'
+ranlib = 'ranlib'
+strip = 'strip'
 
 [host_machine]
 system = 'darwin'
@@ -70,7 +69,7 @@ endian = 'little'
 INI
 
 if [ ! -d build-ios ]; then
-  meson setup build-ios \
+  meson setup build-ios mesa-$VERSION \
     --cross-file cross-ios.ini \
     --buildtype release \
     -Dgallium-drivers=softpipe,freedreno \
@@ -84,18 +83,15 @@ if [ ! -d build-ios ]; then
     -Dopengl=true \
     -Dgles1=disabled \
     -Dgles2=disabled \
-    -Dglvnd=disabled \
     -Dzstd=disabled \
     -Dlz4=disabled \
     -Dvalgrind=disabled \
     -Dlibunwind=disabled \
-    -Dbuild-tests=false \
-    -Dandroid-libbacktrace=disabled
+    -Dbuild-tests=false
 fi
 
 ninja -C build-ios
 
 echo "=== outputs ==="
-find build-ios -name 'libOSMesa*.dylib' -o -name 'libgallium*.dylib' | head -10
-ls -lh build-ios/src/gallium/targets/osmesa/libOSMesa*.dylib 2>/dev/null || true
+find build-ios -name '*.dylib' -exec ls -lh {} \; | head -10
 echo MESA_IOS_OK
