@@ -95,6 +95,7 @@ if [ ! -d build-ios ]; then
     -Dvalgrind=disabled \
     -Dlibunwind=disabled \
     -Dbuild-tests=false \
+    -Dtools=
 fi
 
 ninja -C build-ios
