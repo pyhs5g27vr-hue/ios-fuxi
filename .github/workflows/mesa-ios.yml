@@ -7,7 +7,7 @@ on:
         description: Which libdrm stand-in freedreno is built against
         type: choice
         options: [redwood, fuxi]
-        default: redwood
+        default: fuxi
 
 permissions:
   contents: read
