@@ -116,3 +116,11 @@ int redwood_drm_surface(int fd, struct redwood_drm_surface *surface);
 #endif
 
 #endif
+
+/* Minimal stand-ins for the msm ioctl ABI the drm veneer needs on Darwin,
+ * where no libdrm/msm headers exist. Only the fields redwood_drm.c reads are
+ * declared; the real layout lives in the kernel driver's ABI. */
+#ifndef DRM_MSM_SYNCOBJ_STANDIN
+#define DRM_MSM_SYNCOBJ_STANDIN
+struct drm_msm_syncobj { unsigned handle; };
+#endif
