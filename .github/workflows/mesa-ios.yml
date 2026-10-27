@@ -18,6 +18,16 @@ jobs:
         run: bash tools/mesa-ios/build.sh
       - name: Build the EAGL bridge
         run: bash tools/mesa-ios/build-bridge.sh
+      - name: Syntax-check the draft fuxi winsys
+        if: always()
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          clang -arch arm64 -isysroot "$SDK" -fsyntax-only \
+            -I build/mesa-ios/mesa-25.0.7/include \
+            -I tools/mesa-ios/fuxi-drm \
+            -I tools/mesa-ios/experimental \
+            tools/mesa-ios/experimental/fuxi_drm.c \
+            && echo WINSYS_SYNTAX_OK
       - uses: actions/upload-artifact@v4
         if: always()
         with:
