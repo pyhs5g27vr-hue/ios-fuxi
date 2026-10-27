@@ -101,6 +101,16 @@ fi
 
 ninja -C build-ios
 
+LIB=build-ios/src/gallium/targets/osmesa/libOSMesa.8.dylib
+echo "=== install name -> /redwood/lib ==="
+install_name_tool -id /redwood/lib/libOSMesa.8.dylib "$LIB"
+otool -D "$LIB" | sed -n 2p
+
+echo "=== exported gl* symbols (input for the EAGL bridge generator) ==="
+( llvm-nm -gU "$LIB" 2>/dev/null || nm -gU "$LIB" 2>/dev/null ) \
+  | awk '{print $NF}' | grep -E '^_?gl' | sed 's/^_//' | sort -u > build-ios/exported-gl.txt || true
+wc -l build-ios/exported-gl.txt
+
 echo "=== outputs ==="
 find build-ios -name '*.dylib' -exec ls -lh {} \; | head -10
 echo MESA_IOS_OK
