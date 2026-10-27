@@ -83,8 +83,6 @@ if [ ! -d build-ios ]; then
     -Dopengl=true \
     -Dgles1=disabled \
     -Dgles2=disabled \
-    -Dzstd=disabled \
-    -Dlz4=disabled \
     -Dvalgrind=disabled \
     -Dlibunwind=disabled \
     -Dbuild-tests=false
