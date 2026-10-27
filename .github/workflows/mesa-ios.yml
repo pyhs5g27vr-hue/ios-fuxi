@@ -2,6 +2,12 @@ name: Mesa iOS
 
 on:
   workflow_dispatch:
+    inputs:
+      winsys:
+        description: Which libdrm stand-in freedreno is built against
+        type: choice
+        options: [redwood, fuxi]
+        default: redwood
 
 permissions:
   contents: read
@@ -10,6 +16,8 @@ jobs:
   build:
     runs-on: macos-14
     timeout-minutes: 120
+    env:
+      WINSYS: ${{ inputs.winsys }}
     steps:
       - uses: actions/checkout@v4
         with:
