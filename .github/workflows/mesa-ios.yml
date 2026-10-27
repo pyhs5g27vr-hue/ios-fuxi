@@ -9,13 +9,15 @@ permissions:
 jobs:
   build:
     runs-on: macos-14
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Build Mesa for arm64-apple-ios
         run: bash tools/mesa-ios/build.sh
+      - name: Build the EAGL bridge
+        run: bash tools/mesa-ios/build-bridge.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -23,5 +25,7 @@ jobs:
           path: |
             build/mesa-ios/build-ios/src/gallium/targets/osmesa/libOSMesa*.dylib
             build/mesa-ios/build-ios/exported-gl.txt
+            build/mesa-ios/libredwood-gl.dylib
+            build/mesa-ios/eagl_gen.h
             build/mesa-ios/build-ios/meson-logs/meson-log.txt
           if-no-files-found: warn
