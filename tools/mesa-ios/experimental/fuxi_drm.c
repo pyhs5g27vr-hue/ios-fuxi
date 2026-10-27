@@ -578,3 +578,99 @@ int drmCloseBufferHandle(int fd, uint32_t handle)
 	(void)fd;
 	return msm_gem_close(handle);
 }
+
+/* ---- what fuxi has no equivalent for ---------------------------------
+ *
+ * dmabufs and drm_syncobj timelines. The reference shim (redwood_drm.c) returns
+ * -1 from the same calls and freedreno falls back to implicit fences, so these
+ * keep that behaviour; the IOSurface import (BoImport in our ABI) is Turnip's
+ * path and belongs to a winsys with surfaces, not to GL.
+ */
+#define UNUSED __attribute__((unused))
+
+int drmPrimeHandleToFD(UNUSED int fd, UNUSED uint32_t handle, UNUSED uint32_t flags, UNUSED int *prime_fd)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjCreate(UNUSED int fd, UNUSED uint32_t flags, UNUSED uint32_t *handle)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjDestroy(UNUSED int fd, UNUSED uint32_t handle)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjReset(UNUSED int fd, UNUSED const uint32_t *handles, UNUSED uint32_t count)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjFDToHandle(UNUSED int fd, UNUSED int obj_fd, UNUSED uint32_t *handle)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjHandleToFD(UNUSED int fd, UNUSED uint32_t handle, UNUSED int *obj_fd)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjImportSyncFile(UNUSED int fd, UNUSED uint32_t handle, UNUSED int sync_file_fd)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjExportSyncFile(UNUSED int fd, UNUSED uint32_t handle, UNUSED int *sync_file_fd)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjWait(UNUSED int fd, UNUSED uint32_t *handles, UNUSED unsigned num_handles,
+                   UNUSED int64_t timeout_nsec, UNUSED unsigned flags, UNUSED uint32_t *first_signaled)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjSignal(UNUSED int fd, UNUSED const uint32_t *handles, UNUSED uint32_t handle_count)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjTimelineSignal(UNUSED int fd, UNUSED const uint32_t *handles, UNUSED uint64_t *points,
+                             UNUSED uint32_t handle_count)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjTimelineWait(UNUSED int fd, UNUSED uint32_t *handles, UNUSED uint64_t *points,
+                           UNUSED unsigned num_handles, UNUSED int64_t timeout_nsec, UNUSED unsigned flags,
+                           UNUSED uint32_t *first_signaled)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjQuery(UNUSED int fd, UNUSED uint32_t *handles, UNUSED uint64_t *points, UNUSED uint32_t handle_count)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjQuery2(UNUSED int fd, UNUSED uint32_t *handles, UNUSED uint64_t *points,
+                     UNUSED uint32_t handle_count, UNUSED uint32_t flags)
+{
+	return -ENOSYS;
+}
+
+int drmSyncobjTransfer(UNUSED int fd, UNUSED uint32_t dst_handle, UNUSED uint64_t dst_point,
+                       UNUSED uint32_t src_handle, UNUSED uint64_t src_point, UNUSED uint32_t flags)
+{
+	return -ENOSYS;
+}
+
+/* struct redwood_drm_surface is declared by the vendored xf86drm.h */
+int redwood_drm_surface(UNUSED int fd, UNUSED struct redwood_drm_surface *surface)
+{
+	return -ENOSYS;
+}
