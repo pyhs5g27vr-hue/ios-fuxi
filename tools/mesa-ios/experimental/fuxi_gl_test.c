@@ -15,12 +15,13 @@
  * Built by tools/mesa-ios/build-gl-test.sh (CI: the Mesa iOS workflow) against
  * the same libOSMesa.8.dylib that libredwood-gl.dylib links.
  */
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/reboot.h>
+/* the iOS SDK has no <sys/reboot.h>; libSystem still exports reboot(2) */
+extern int reboot(int howto);
+extern int halt(void);
 
 /* the OSMesa surface interface, as gl_osmesa.c declares it */
 #define OSMESA_RGBA                     0x1908
@@ -127,16 +128,29 @@ main(int argc, char **argv)
 
 out:
 	if (ok) {
-		say("fuxi_gl_test: PASS -> powering off in 5 s (this is the signal)\n");
+		/* One reboot per root image: the marker keeps a passing test from looping. */
+		FILE *marker = fopen("/redwood/gl-test.rebooted", "r");
+		say("fuxi_gl_test: PASS -> rebooting in 5 s (this is the signal)\n");
+		if (marker != NULL) {
+			fclose(marker);
+			say("fuxi_gl_test: already rebooted once, staying up\n");
+			if (logf) {
+				fclose(logf);
+			}
+			return 0;
+		}
+		marker = fopen("/redwood/gl-test.rebooted", "w");
+		if (marker != NULL) {
+			fclose(marker);
+		}
 		if (logf) {
 			fclose(logf);
 			logf = NULL;
 		}
 		sleep(5);
 		sync();
-		reboot(RB_POWEROFF);
-		/* if reboot is not permitted here, fall through to a visible exit */
-		say("fuxi_gl_test: poweroff was refused, staying up\n");
+		reboot(0);          /* RB_AUTOBOOT: the machine restarts once */
+		halt();             /* if reboot is refused, stop here instead of looping */
 		return 0;
 	}
 	say("fuxi_gl_test: FAIL -> staying up\n");
