@@ -191,6 +191,16 @@ static int get_param(uint32_t param, uint64_t *value)
 	case MSM_PARAM_GMEM_SIZE:  *value = info.gmem_bytes; break;
 	case MSM_PARAM_GMEM_BASE:  *value = info.gmem_base; break;
 	case MSM_PARAM_FAULTS:     *value = 0; break;
+	case MSM_PARAM_TIMESTAMP: {
+		struct NativeAdrenoAbiTimestamp ts = { 0 };
+		if (abi_call(NativeAdrenoMethodGetTimestamp, NULL, 0, &ts, sizeof(ts)) != 0) {
+			return -ENODEV;
+		}
+		*value = ts.ticks;
+		break;
+	}
+	case MSM_PARAM_PP_PGTABLE: *value = 1; break;   /* our ABI maps per client */
+	case MSM_PARAM_NR_RINGS:   *value = 1; break;   /* one queue per client */
 #ifdef MSM_PARAM_VA_START
 	case MSM_PARAM_VA_START:   *value = info.va_start; break;
 #endif
