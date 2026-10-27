@@ -15,6 +15,7 @@
  * Built by tools/mesa-ios/build-gl-test.sh (CI: the Mesa iOS workflow) against
  * the same libOSMesa.8.dylib that libredwood-gl.dylib links.
  */
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -80,7 +81,7 @@ main(int argc, char **argv)
 	unsigned char window[WIDTH * HEIGHT * 4];
 	unsigned char pixel[4] = { 0, 0, 0, 0 };
 	OSMesaContext context;
-	const int attributes[] = {
+	int attributes[] = {
 		OSMESA_FORMAT, OSMESA_RGBA, OSMESA_DEPTH_BITS, 24, OSMESA_STENCIL_BITS, 8,
 		OSMESA_PROFILE, OSMESA_ES_PROFILE,
 		OSMESA_CONTEXT_MAJOR_VERSION, 3, OSMESA_CONTEXT_MINOR_VERSION, 0,
@@ -91,7 +92,7 @@ main(int argc, char **argv)
 	(void)argc;
 	(void)argv;
 	logf = fopen(LOG, "a");
-	say("fuxi_gl_test: start (%s)\n", OSMesaGetProcAddress != NULL ? "symbols resolved" : "no symbols");
+	say("fuxi_gl_test: start\n");
 
 	context = OSMesaCreateContextAttribs(attributes, NULL);
 	if (context == NULL) {
