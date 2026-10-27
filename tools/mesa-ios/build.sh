@@ -27,6 +27,14 @@ echo "SDK = $SDK"
 echo "CC  = $CC"
 "$CC" --version | head -1 || true
 
+# macOS ships bison 2.3, which cannot parse Mesa's %code directives
+if ! bison --version 2>/dev/null | head -1 | grep -qE '3\.|4\.|5\.'; then
+  echo "=== installing bison/flex from Homebrew ==="
+  brew install bison flex >/dev/null 2>&1 || true
+  export PATH="$(brew --prefix bison)/bin:$(brew --prefix flex)/bin:$PATH"
+fi
+bison --version | head -1
+
 mkdir -p "$B"
 cd "$B"
 
