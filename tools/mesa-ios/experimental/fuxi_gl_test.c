@@ -127,35 +127,21 @@ main(int argc, char **argv)
 	}
 
 out:
+	/* The result is the *time* of the reboot:
+	 *   PASS -> 45 s   FAIL -> 105 s   job never ran -> no reboot at all.
+	 * Nothing has to be read off the device for that. */
 	if (ok) {
-		/* One reboot per root image: the marker keeps a passing test from looping. */
-		FILE *marker = fopen("/redwood/gl-test.rebooted", "r");
-		say("fuxi_gl_test: PASS -> rebooting in 5 s (this is the signal)\n");
-		if (marker != NULL) {
-			fclose(marker);
-			say("fuxi_gl_test: already rebooted once, staying up\n");
-			if (logf) {
-				fclose(logf);
-			}
-			return 0;
-		}
-		marker = fopen("/redwood/gl-test.rebooted", "w");
-		if (marker != NULL) {
-			fclose(marker);
-		}
-		if (logf) {
-			fclose(logf);
-			logf = NULL;
-		}
-		sleep(5);
+		say("fuxi_gl_test: PASS -> rebooting in 45 s (the timing is the signal)\n");
+		if (logf) { fclose(logf); logf = NULL; }
+		sleep(45);
 		sync();
-		reboot(0);          /* RB_AUTOBOOT: the machine restarts once */
-		for (;;) sleep(60); /* reboot was refused: stay put rather than loop */
-		return 0;
+		reboot(0);
+		for (;;) sleep(60);
 	}
-	say("fuxi_gl_test: FAIL -> staying up\n");
-	if (logf) {
-		fclose(logf);
-	}
-	return 1;
+	say("fuxi_gl_test: FAIL -> rebooting in 105 s (the timing is the signal)\n");
+	if (logf) { fclose(logf); logf = NULL; }
+	sleep(105);
+	sync();
+	reboot(0);
+	for (;;) sleep(60);
 }
