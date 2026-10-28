@@ -43,7 +43,7 @@ OUT=$B/libredwood-gl.dylib
 "$CC" -arch arm64 -miphoneos-version-min=$MIN_IOS -isysroot "$SDK" \
   -O2 -fPIC -dynamiclib \
   -I"$B" -I"$KIT/userland" -I"$MESA_SRC/include" -I"$MESA_BUILD/include" -I"$MESA_BUILD/src" \
-  "$KIT/userland/eagl.c" "$KIT/userland/gl_osmesa.c" \
+  "$KIT/userland/eagl.c" "$KIT/userland/gl_osmesa.c" "$KIT/userland/fuxi_probe.c" \
   "$OSMESA_LIB" \
   -framework CoreFoundation -framework IOKit -framework IOSurface -framework CoreGraphics \
   -install_name /redwood/lib/libredwood-gl.dylib \
