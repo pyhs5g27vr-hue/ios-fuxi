@@ -1,6 +1,25 @@
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -5568,10 +5568,77 @@
+@@ -1403,6 +1403,18 @@
+ 	}
+ 	if (proc_getcsflags(p) & CS_EXEC_SET_ENFORCEMENT) {
+ 		imgp->ip_csflags |= CS_ENFORCEMENT;
++	}
++	/*
++	 * Bring-up aid: dyld refuses DYLD_* variables for a process marked hard or
++	 * restricted, and a platform binary carries those bits in its own signature.
++	 * The programs exec_inject names get them cleared, so the library the kernel
++	 * inserts is actually loaded.
++	 */
++	/* declared below, next to the rest of the injection code */
++	static bool exec_inject_target(struct image_params *imgp);
++
++	if (exec_inject_target(imgp)) {
++		imgp->ip_csflags &= ~(CS_HARD | CS_RESTRICT | CS_ENFORCEMENT);
+ 	}
+ 	if (proc_getcsflags(p) & CS_EXEC_INHERIT_SIP) {
+ 		if (proc_getcsflags(p) & CS_INSTALLER) {
+@@ -5568,10 +5580,111 @@
   * Note:	The argument and environment vectors are user space pointers
   *		to arrays of user space pointers.
   */
@@ -8,15 +27,51 @@
 +/*
 + * Bring-up aid: the sysctl kern.exec_inject holds "LIBRARY NAME NAME ..."; every program
 + * whose file name is one of the NAMEs is started with DYLD_INSERT_LIBRARIES=LIBRARY in its
-+ * environment, so that dyld loads our library into it. Several such groups may follow each
-+ * other, separated by ";". launchd refuses to pass DYLD_ variables from a job description,
-+ * which is why the kernel adds this one. Set by the loader (or by init) before launchd.
++ * environment, and has the code-signing flags that make dyld ignore that variable cleared.
++ * launchd refuses to pass DYLD_ variables from a job description, which is why the kernel
++ * adds this one. Set by the loader (or by init) before launchd.
 + */
 +static char exec_inject_conf[512] =
 +    "/redwood/lib/libredwood-gl.dylib backboardd";
 +SYSCTL_STRING(_kern, OID_AUTO, exec_inject, CTLFLAG_RW | CTLFLAG_LOCKED, exec_inject_conf,
 +    sizeof(exec_inject_conf),
 +    "LIBRARY NAME... [; LIBRARY NAME...]: programs started with the library inserted");
++
++/* true when this program's file name appears in one of the groups */
++static bool
++exec_inject_target(struct image_params *imgp)
++{
++	const char *name, *p = exec_inject_conf;
++	size_t namelen;
++
++	if (*p == 0 || imgp->ip_ndp == NULL) {
++		return false;
++	}
++	name = imgp->ip_ndp->ni_cnd.cn_nameptr;
++	namelen = imgp->ip_ndp->ni_cnd.cn_namelen;
++	if (namelen == 0) {
++		return false;
++	}
++	while (*p != 0) {
++		while (*p == ' ' || *p == ';') {
++			p++;
++		}
++		while (*p != 0 && *p != ' ' && *p != ';') {
++			p++;                    /* the group's library */
++		}
++		while (*p == ' ') {
++			const char *word = ++p;
++
++			while (*p != 0 && *p != ' ' && *p != ';') {
++				p++;
++			}
++			if ((size_t)(p - word) == namelen && strncmp(word, name, namelen) == 0) {
++				return true;
++			}
++		}
++	}
++	return false;
++}
 +
 +static bool
 +exec_inject_env(struct image_params *imgp, char *env, size_t size)
@@ -56,8 +111,6 @@
 +			}
 +		}
 +		if (matched && liblen != 0 && used + 1 + liblen < size) {
-+			/* diagnostic build: prove on the screen that this fired */
-+			panic("FUXI INJECT: %.*s gets %.*s", (int)namelen, name, (int)liblen, library);
 +			if (any) {
 +				env[used++] = ':';
 +			}
@@ -78,7 +131,7 @@
  	int error = 0;
  	int     ptr_size = (imgp->ip_flags & IMGPF_WAS_64BIT_ADDR) ? 8 : 4;
  	int new_ptr_size = (imgp->ip_flags & IMGPF_IS_64BIT_ADDR) ? 8 : 4;
-@@ -5739,6 +5806,19 @@
+@@ -5739,6 +5852,19 @@
  		}
  		imgp->ip_argspace -= new_ptr_size; /* to hold envv[] entry */
  		imgp->ip_envc++;
