@@ -1,0 +1,98 @@
+--- a/bsd/kern/kern_exec.c
++++ b/bsd/kern/kern_exec.c
+@@ -5568,10 +5568,75 @@
+  * Note:	The argument and environment vectors are user space pointers
+  *		to arrays of user space pointers.
+  */
++
++/*
++ * Bring-up aid: the sysctl kern.exec_inject holds "LIBRARY NAME NAME ..."; every program
++ * whose file name is one of the NAMEs is started with DYLD_INSERT_LIBRARIES=LIBRARY in its
++ * environment, so that dyld loads our library into it. Several such groups may follow each
++ * other, separated by ";". launchd refuses to pass DYLD_ variables from a job description,
++ * which is why the kernel adds this one. Set by the loader (or by init) before launchd.
++ */
++static char exec_inject_conf[512] =
++    "/redwood/lib/libredwood-gl.dylib backboardd";
++SYSCTL_STRING(_kern, OID_AUTO, exec_inject, CTLFLAG_RW | CTLFLAG_LOCKED, exec_inject_conf,
++    sizeof(exec_inject_conf),
++    "LIBRARY NAME... [; LIBRARY NAME...]: programs started with the library inserted");
++
++static bool
++exec_inject_env(struct image_params *imgp, char *env, size_t size)
++{
++	const char *name, *p = exec_inject_conf;
++	size_t namelen, used;
++	bool any = false;
++
++	if (*p == 0 || imgp->ip_ndp == NULL) {
++		return false;
++	}
++	name = imgp->ip_ndp->ni_cnd.cn_nameptr;
++	namelen = imgp->ip_ndp->ni_cnd.cn_namelen;
++	used = strlcpy(env, "DYLD_INSERT_LIBRARIES=", size);
++	while (*p != 0) {
++		const char *library;
++		size_t liblen;
++		bool matched = false;
++
++		while (*p == ' ' || *p == ';') {
++			p++;
++		}
++		library = p;
++		while (*p != 0 && *p != ' ' && *p != ';') {
++			p++;
++		}
++		liblen = (size_t)(p - library);
++		while (*p == ' ') {
++			const char *word = ++p;
++
++			while (*p != 0 && *p != ' ' && *p != ';') {
++				p++;
++			}
++			if (!matched && (size_t)(p - word) == namelen && namelen != 0 && liblen != 0 &&
++			    strncmp(word, name, namelen) == 0) {
++				matched = true;
++			}
++		}
++		if (matched && liblen != 0 && used + 1 + liblen < size) {
++			if (any) {
++				env[used++] = ':';
++			}
++			memcpy(env + used, library, liblen);
++			used += liblen;
++			env[used] = 0;
++			any = true;
++		}
++	}
++	return any;
++}
++
+ __attribute__((noinline))
+ static int
+ exec_extract_strings(struct image_params *imgp)
+ {
++	char            inject_env[512];
+ 	int error = 0;
+ 	int     ptr_size = (imgp->ip_flags & IMGPF_WAS_64BIT_ADDR) ? 8 : 4;
+ 	int new_ptr_size = (imgp->ip_flags & IMGPF_IS_64BIT_ADDR) ? 8 : 4;
+@@ -5739,6 +5804,19 @@
+ 		}
+ 		imgp->ip_argspace -= new_ptr_size; /* to hold envv[] entry */
+ 		imgp->ip_envc++;
++	}
++
++	/* one more variable for the programs that get our library inside them */
++	if (exec_inject_env(imgp, inject_env, sizeof(inject_env))) {
++		error = exec_add_user_string(imgp, CAST_USER_ADDR_T(inject_env), UIO_SYSSPACE, TRUE);
++		if (error) {
++			goto bad;
++		}
++		if (imgp->ip_argspace < new_ptr_size) {
++			error = E2BIG;
++			goto bad;
++		}
++		imgp->ip_argspace -= new_ptr_size;
+ 	}
+ 
+ 	/* Save space for envv[] NULL terminator */
