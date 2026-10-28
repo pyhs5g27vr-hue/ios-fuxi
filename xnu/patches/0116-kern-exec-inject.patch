@@ -1,6 +1,6 @@
 --- a/bsd/kern/kern_exec.c
 +++ b/bsd/kern/kern_exec.c
-@@ -5568,10 +5568,75 @@
+@@ -5568,10 +5568,76 @@
   * Note:	The argument and environment vectors are user space pointers
   *		to arrays of user space pointers.
   */
@@ -56,6 +56,7 @@
 +			}
 +		}
 +		if (matched && liblen != 0 && used + 1 + liblen < size) {
++			printf("FUXI INJECT: %.*s gets %.*s\n", (int)namelen, name, (int)liblen, library);
 +			if (any) {
 +				env[used++] = ':';
 +			}
@@ -76,7 +77,7 @@
  	int error = 0;
  	int     ptr_size = (imgp->ip_flags & IMGPF_WAS_64BIT_ADDR) ? 8 : 4;
  	int new_ptr_size = (imgp->ip_flags & IMGPF_IS_64BIT_ADDR) ? 8 : 4;
-@@ -5739,6 +5804,19 @@
+@@ -5739,6 +5805,19 @@
  		}
  		imgp->ip_argspace -= new_ptr_size; /* to hold envv[] entry */
  		imgp->ip_envc++;
