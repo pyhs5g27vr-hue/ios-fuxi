@@ -315,7 +315,12 @@ class FuxiAdrenoUserClient : public IOUserClient {
   if (method==NativeAdrenoMethodSetMetadata || method==NativeAdrenoMethodGetMetadata) {
    const auto &r=*static_cast<const NativeAdrenoAbiMetadata *>(in); Bo *b=find(r.handle);
    if (!b || r.reserved || r.bytes>64) return kIOReturnBadArgument;
-   if (method==NativeAdrenoMethodSetMetadata) { bcopy(r.text,b->metadata,r.bytes); b->metadataBytes=r.bytes; }
+   if (method==NativeAdrenoMethodSetMetadata) {
+    bcopy(r.text,b->metadata,r.bytes); b->metadataBytes=r.bytes;
+    /* the client's own diagnosis, on the console: this is the only channel
+     * a userland GPU client has when it refuses a command */
+    if (r.bytes) printf("FUXI CLIENT: %.*s\n", (int)r.bytes, r.text);
+   }
    else {
     if (r.bytes<b->metadataBytes) return kIOReturnBadArgument;
     auto &reply=*static_cast<NativeAdrenoAbiMetadata *>(out); reply={}; reply.handle=r.handle;
