@@ -90,6 +90,9 @@ main(int argc, char **argv)
 
 	(void)argc;
 	(void)argv;
+	/* wait for the system to be up: launchd starts us early, long before the lock
+	 * screen, and the reboot-timing signal is only readable once it is */
+	sleep(240);
 	logf = fopen(LOG, "a");
 	say("fuxi_gl_test: start\n");
 
